@@ -1,6 +1,11 @@
 #!/bin/bash
 TMPFILE=`uuidgen | tr -d '-'`
 
+until [ -d data/tempinput ]
+do
+     sleep 3
+done
+
 echo $1 > data/tempinput/$TMPFILE
 mv data/tempinput/$TMPFILE data/input/$TMPFILE
 
