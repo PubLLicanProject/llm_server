@@ -15,5 +15,5 @@ cd ..
 python get_model.py nvidia/Llama3-ChatQA-1.5-8B
 #Using 8-bit quantized model for testing
 ./start.sh nvidia/Llama3-ChatQA-1.5-8B_Q8_0 &
-./prompt.sh ""Tell me a joke about a computer scientist who couldn't write a shell script."
+./prompt.sh "Tell me a joke about a computer scientist who couldn't write a shell script."
 ./exit.sh
