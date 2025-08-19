@@ -1,4 +1,6 @@
+transformers
 torch
+huggingface-hub>=0.23.2
 llama_cpp_python
 huggingface-hub
 sentencepiece
