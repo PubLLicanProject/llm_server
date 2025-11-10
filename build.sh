@@ -49,12 +49,18 @@ conda activate "$ENV_NAME"
 pip install -r requirements.txt
 chmod 755 ./*.sh
 
-echo "Please select your GPU type:"
-echo "  1) AMD"
-echo "  2) NVIDIA"
-echo
-echo "Enter your choice [1-2]: "
-read -r choice
+if [[ -t 0 ]]; then
+    echo "Please select your GPU type:"
+    echo "  1) AMD"
+    echo "  2) NVIDIA"
+    echo
+    echo "Enter your choice [1-2]: "
+    read -r choice
+else
+    # Default to NVIDIA if non-interactive
+    echo "Non-interactive mode detected. Defaulting to NVIDIA."
+    choice=2
+fi
 
 case "$choice" in
 1)
