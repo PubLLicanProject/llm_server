@@ -1,4 +1,3 @@
-
 import ollama
 import os, sys, time
 import base64
@@ -115,8 +114,8 @@ if __name__ == "__main__":
         modelname = sys.argv[1]
 
     model_options = {
-        seed = 9342,  # deterministic seed
-        n_ctx = 17048,  # max context tokens
+        "seed": 9342,  # deterministic seed
+        "n_ctx": 17048,  # max context tokens
     }
 
     run_server()
