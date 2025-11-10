@@ -1,7 +1,5 @@
 #!/bin/bash
 
-# TODO: stop breaking with partial downloads/reruns
-
 # This script
 # Downloads the latest miniconda installer from https://docs.conda.io/en/latest/miniconda.html
 # And the latest ollama version from https://ollama.com/
@@ -23,8 +21,20 @@ mkdir -p "${OLLAMA_PREFIX}/bin"
 
 echo "Installing Miniconda to ${CONDA_PREFIX}."
 INSTALLER="Miniconda3-latest-Linux-x86_64.sh"
-wget https://repo.anaconda.com/miniconda/$INSTALLER
-bash "$INSTALLER" -b -p "$(realpath "$CONDA_PREFIX")"
+
+if [ ! -f "$INSTALLER" ]; then
+    echo "Downloading Miniconda installer..."
+    wget -c "https://repo.anaconda.com/miniconda/$INSTALLER"
+else
+    echo "Miniconda installer already present, skipping download."
+fi
+
+if [ ! -d "$CONDA_PREFIX" ]; then
+    echo "Installing Miniconda..."
+    bash "$INSTALLER" -b -p "$(realpath "$CONDA_PREFIX")"
+else
+    echo "Miniconda already installed in ${CONDA_PREFIX}, skipping installation."
+fi
 export PATH="$(realpath "$CONDA_PREFIX/bin"):$PATH"
 
 # TOS
@@ -60,10 +70,29 @@ case "$choice" in
 esac
 
 echo "Installing Ollama."
-curl -fL https://ollama.com/download/ollama-linux-amd64.tgz | tar zx -C "$OLLAMA_PREFIX"
+OLLAMA_TGZ="ollama-linux-amd64.tgz"
+
+if [ ! -f "$OLLAMA_TGZ" ]; then
+    echo "Downloading Ollama..."
+    curl -fLo "$OLLAMA_TGZ" -C - https://ollama.com/download/$OLLAMA_TGZ
+else
+    echo "Ollama archive already present, skipping download."
+fi
+
+if [ ! -x "$OLLAMA_PREFIX/bin/ollama" ]; then
+    echo "Extracting Ollama..."
+    tar zxf "$OLLAMA_TGZ" -C "$OLLAMA_PREFIX"
+else
+    echo "Ollama already installed at $OLLAMA_PREFIX/bin/ollama"
+fi
+
 if [ "$GPU" = "AMD" ]; then
     echo "Installing AMD ROCm add-on."
-    curl -fL https://ollama.com/download/ollama-linux-amd64-rocm.tgz | tar zx -C "$OLLAMA_PREFIX"
+    ROCM_TGZ="ollama-linux-amd64-rocm.tgz"
+    if [ ! -f "$ROCM_TGZ" ]; then
+        curl -fLo "$ROCM_TGZ" -C - https://ollama.com/download/$ROCM_TGZ
+    fi
+    tar zxf "$ROCM_TGZ" -C "$OLLAMA_PREFIX"
 fi
 
 export PATH="$OLLAMA_PREFIX/bin:$PATH"
