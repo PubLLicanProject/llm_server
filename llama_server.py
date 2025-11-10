@@ -85,10 +85,11 @@ def run_server():
 
             response = ollama.chat(**model_arguments)
 
-            choices = response["choices"]
-            fc = choices[0]
-            message = fc["message"]
-            content = message["content"]
+            message = response.get("message", {})
+            content = message.get("content", "")
+
+            if not content:
+                raise ValueError(f"No content returned from model: {response}")
 
             # save the message to a file, it's temporary so that the move operation is atomic
             with open(tempoutfile, "w") as f:
