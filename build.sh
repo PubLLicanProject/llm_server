@@ -154,11 +154,35 @@ cat >"$ACTIVATE_DIR/2_ollama_server.sh" <<EOF
 #!/bin/bash
 set -euo pipefail
 
-export OLLAMA_PID_FILE="$(realpath "$OLLAMA_PREFIX")/ollama.pid"
-export OLLAMA_LOG_FILE="$(realpath "$OLLAMA_PREFIX")/ollama.log"
+HOSTNAME_TAG="$(hostname | tr -cs 'A-Za-z0-9_' '_')"
+export OLLAMA_PID_FILE="$(realpath "$OLLAMA_PREFIX")/ollama.pid.\${HOSTNAME_TAG}"
+export OLLAMA_LOG_FILE="$(realpath "$OLLAMA_PREFIX")/ollama.log.\${HOSTNAME_TAG}"
+
+MIN_PORT=1024
+MAX_PORT=65535
+PORT_FOUND=0
+
+for i in {1..10}; do
+    CANDIDATE_PORT=\$((RANDOM % (MAX_PORT - MIN_PORT + 1) + MIN_PORT))
+
+    if ! ss -tln 2>/dev/null | grep -q ":\${CANDIDATE_PORT} "; then
+        export OLLAMA_HOST="127.0.0.1:\${CANDIDATE_PORT}"
+        PORT_FOUND=1
+        break
+    fi
+done
+
+if [ \$PORT_FOUND -ne 1 ]; then
+    echo "Error: Could not find a free port"
+    exit 1
+fi
+
+echo "Using OLLAMA_HOST=\$OLLAMA_HOST"
+echo "PID file: \$OLLAMA_PID_FILE"
+echo "Log file: \$OLLAMA_LOG_FILE"
 
 if [ -f "\$OLLAMA_PID_FILE" ]; then
-    if ps -p \$(cat "\$OLLAMA_PID_FILE") > /dev/null; then
+    if ps -p \$(cat "\$OLLAMA_PID_FILE") > /dev/null 2>&1; then
         echo "Ollama server already running (PID: \$(cat "\$OLLAMA_PID_FILE"))."
         exit 0
     else
@@ -167,12 +191,18 @@ if [ -f "\$OLLAMA_PID_FILE" ]; then
     fi
 fi
 
-echo "Starting Ollama server..."
+echo "Starting Ollama server on \$OLLAMA_HOST ..."
 setsid "\$OLLAMA_PREFIX_ABS/bin/ollama" serve > "\$OLLAMA_LOG_FILE" 2>&1 &
 
 echo \$! > "\$OLLAMA_PID_FILE"
+sleep 1
 
-echo "Ollama server started (PID: \$(cat "\$OLLAMA_PID_FILE")). Log: \$OLLAMA_LOG_FILE"
+if ps -p \$(cat "\$OLLAMA_PID_FILE") > /dev/null 2>&1; then
+    echo "Ollama server started (PID: \$(cat "\$OLLAMA_PID_FILE")) on \$OLLAMA_HOST"
+else
+    echo "Error: Ollama failed to start."
+    exit 1
+fi
 EOF
 chmod +x "$ACTIVATE_DIR/2_ollama_server.sh"
 
@@ -193,7 +223,7 @@ if [ -z "$PID" ]; then
     exit 0
 fi
 
-if ps -p $PID > /dev/null; then
+if ps -p $PID > /dev/null 2>&1; then
     echo "Stopping Ollama server (PID: $PID)..."
     kill $PID
     for _ in 1 2 3; do
@@ -215,6 +245,7 @@ rm -f "$OLLAMA_PID_FILE"
 
 unset OLLAMA_PID_FILE
 unset OLLAMA_LOG_FILE
+unset OLLAMA_HOST
 EOF
 chmod +x "$DEACTIVATE_DIR/1_ollama_server.sh"
 
