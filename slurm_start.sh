@@ -5,4 +5,4 @@
 #SBATCH --output=slurm_%j.log   # Standard output and error log
 #SBATCH --gres=gpu:1
 #SBATCH --partition=gpu
-./start.sh $@
+./start.sh "$@"

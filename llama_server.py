@@ -2,13 +2,18 @@ import ollama
 import os, sys, time
 import base64
 
-model_options = None
-datapath = "./data"
+modelname = os.getenv("MODELNAME", "llama3-chatqa:8b")
+model_options = {}
+model_options["seed"] = int(os.getenv("MODEL_SEED", "9342"))
+model_options["n_ctx"] = int(os.getenv("OLLAMA_CONTEXT_LENGTH", "17048"))
 
-system_prompt = (
+datapath = os.getenv("DATAPATH", "./data")
+
+system_prompt = os.getenv(
+    "SYSTEM_PROMPT",
     "You are a helpful assistant curating data.  If a question does not"
     " make any sense, or is not factually coherent, explain why instead of answering something not correct. If you"
-    " don't know the answer to a question, please don't share false information. Give a complete answer, do not try to continue the conversation."
+    " don't know the answer to a question, please don't share false information. Give a complete answer, do not try to continue the conversation.",
 )
 
 
@@ -70,6 +75,8 @@ def run_server():
                 prompt = base64.b64decode(words[1]).decode("utf-8")
                 print("Decoded Prompt:", prompt)
 
+            # TODO: handle files that are stuck in pending
+            # (caused by any exception after this point)
             os.rename(infile, f"data/pending/{file}")
 
             model_arguments = {
@@ -102,7 +109,7 @@ def run_server():
 
             print("AI:", message)
         except Exception as e:
-            print(e)
+            print("Exception:", e)
             pass
 
     end = time.time()
@@ -110,13 +117,7 @@ def run_server():
 
 
 if __name__ == "__main__":
-    modelname = "llama3-chatqa:8b"
     if len(sys.argv) > 1:
         modelname = sys.argv[1]
-
-    model_options = {
-        "seed": 9342,  # deterministic seed
-        "n_ctx": 17048,  # max context tokens
-    }
 
     run_server()
