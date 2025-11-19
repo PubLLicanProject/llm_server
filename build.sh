@@ -250,7 +250,7 @@ set -euo pipefail
 # Resolve paths relative to this script
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 CONDA_PREFIX="$SCRIPT_DIR/conda"
-ENV_NAME="env"
+ENV_NAME="$ENV"
 
 # Source conda (from the Miniconda installation, not the env)
 if [ ! -f "$CONDA_PREFIX/etc/profile.d/conda.sh" ]; then
