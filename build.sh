@@ -173,34 +173,28 @@ for i in {1..10}; do
 done
 
 if [ \$PORT_FOUND -ne 1 ]; then
-    echo "Error: Could not find a free port"
+    echo "{\"status\": \"error\", \"message\": \"Could not find free port for ollama server\"}"
     exit 1
 fi
 
-echo "Using OLLAMA_HOST=\$OLLAMA_HOST"
-echo "PID file: \$OLLAMA_PID_FILE"
-echo "Log file: \$OLLAMA_LOG_FILE"
-
 if [ -f "\$OLLAMA_PID_FILE" ]; then
     if ps -p \$(cat "\$OLLAMA_PID_FILE") > /dev/null 2>&1; then
-        echo "Ollama server already running (PID: \$(cat "\$OLLAMA_PID_FILE"))."
+        echo "{\"status\": \"ok\", \"host\": \"\$OLLAMA_HOST\", \"pid\": \"\$(cat "\$OLLAMA_PID_FILE")\"}"
         exit 0
     else
-        echo "Stale PID file found. Removing..."
         rm -f "\$OLLAMA_PID_FILE"
     fi
 fi
 
-echo "Starting Ollama server on \$OLLAMA_HOST ..."
 setsid "\$OLLAMA_PREFIX_ABS/bin/ollama" serve > "\$OLLAMA_LOG_FILE" 2>&1 &
 
 echo \$! > "\$OLLAMA_PID_FILE"
 sleep 1
 
 if ps -p \$(cat "\$OLLAMA_PID_FILE") > /dev/null 2>&1; then
-    echo "Ollama server started (PID: \$(cat "\$OLLAMA_PID_FILE")) on \$OLLAMA_HOST"
+    echo "{\"status\": \"ok\", \"host\": \"\$OLLAMA_HOST\", \"pid\": \"\$(cat "\$OLLAMA_PID_FILE")\"}"
 else
-    echo "Error: Ollama failed to start."
+    echo "{\"status\": \"error\", \"message\": \"Ollama server failed to start\"}"
     exit 1
 fi
 EOF
@@ -212,19 +206,18 @@ cat >"$DEACTIVATE_DIR/1_ollama_server.sh" <<'EOF'
 set -euo pipefail
 
 if [ -z "${OLLAMA_PID_FILE-}" ] || [ ! -f "$OLLAMA_PID_FILE" ]; then
-    echo "Ollama PID file not found. Server may not be running."
+    echo "{\"status\": \"warning\", \"message\": \"Ollama PID file not found server may not be running\"}"
     exit 0
 fi
 
 PID=$(cat "$OLLAMA_PID_FILE")
 if [ -z "$PID" ]; then
-    echo "PID file is empty."
+    echo "{\"status\": \"warning\", \"message\": \"Ollama PID file is empty server may not be running\"}"
     rm -f "$OLLAMA_PID_FILE"
     exit 0
 fi
 
 if ps -p $PID > /dev/null 2>&1; then
-    echo "Stopping Ollama server (PID: $PID)..."
     kill $PID
     for _ in 1 2 3; do
         if ! ps -p $PID > /dev/null; then
@@ -233,12 +226,11 @@ if ps -p $PID > /dev/null 2>&1; then
         sleep 1
     done
     if ps -p $PID > /dev/null; then
-        echo "Ollama did not stop, forcing kill (PID: $PID)..."
         kill -9 $PID
     fi
-    echo "Ollama server stopped."
+    echo "{\"status\": \"ok\"}"
 else
-    echo "Ollama server (PID: $PID) not running."
+    echo "{\"status\": \"warning\", \"message\": \"Ollama server \$PID is not running\"}"
 fi
 
 rm -f "$OLLAMA_PID_FILE"
@@ -273,7 +265,6 @@ deactivate() {
     EXIT_CODE=$?
 
     if [ "${CONDA_DEFAULT_ENV:-}" = "$ENV_NAME" ]; then
-        echo "Running cleanup, deactivating environment..."
         conda deactivate
     fi
 
