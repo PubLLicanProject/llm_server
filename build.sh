@@ -16,6 +16,7 @@ set -euo pipefail
 : "${OLLAMA_PREFIX:=ollama}"
 : "${CONDA_PREFIX:=conda}"
 : "${ENV_NAME:=env}"
+CONDA_PATH=$CONDA_PREFIX
 
 mkdir -p "${OLLAMA_PREFIX}/bin"
 if [[ -t 0 ]]; then
@@ -128,7 +129,9 @@ set -euo pipefail
 export OLLAMA_OLD_PATH="\$PATH"
 export OLLAMA_PREFIX_ABS="$(realpath "$OLLAMA_PREFIX")"
 export PATH="\$OLLAMA_PREFIX_ABS/bin:\$PATH"
-export OLLAMA_MODELS="\$OLLAMA_PREFIX_ABS/models"
+: "\${OLLAMA_MODELS:="\$OLLAMA_PREFIX_ABS/models"}"
+export OLLAMA_MODELS
+
 EOF
 chmod +x "$ACTIVATE_DIR/1_ollama_path.sh"
 
@@ -156,23 +159,24 @@ HOSTNAME_TAG="$(hostname | tr -cs 'A-Za-z0-9_' '_')"
 export OLLAMA_PID_FILE="$(realpath "$OLLAMA_PREFIX")/ollama.pid.\${HOSTNAME_TAG}"
 export OLLAMA_LOG_FILE="$(realpath "$OLLAMA_PREFIX")/ollama.log.\${HOSTNAME_TAG}"
 
-MIN_PORT=1024
-MAX_PORT=65535
-PORT_FOUND=0
+if [ -z "\${OLLAMA_HOST:-}" ]; then
+    MIN_PORT=1024
+    MAX_PORT=65535
+    PORT_FOUND=0
+    for i in {1..10}; do
+        CANDIDATE_PORT=\$((RANDOM % (MAX_PORT - MIN_PORT + 1) + MIN_PORT))
 
-for i in {1..10}; do
-    CANDIDATE_PORT=\$((RANDOM % (MAX_PORT - MIN_PORT + 1) + MIN_PORT))
+        if ! ss -tln 2>/dev/null | grep -q ":\${CANDIDATE_PORT} "; then
+            export OLLAMA_HOST="127.0.0.1:\${CANDIDATE_PORT}"
+            PORT_FOUND=1
+            break
+        fi
+    done
 
-    if ! ss -tln 2>/dev/null | grep -q ":\${CANDIDATE_PORT} "; then
-        export OLLAMA_HOST="127.0.0.1:\${CANDIDATE_PORT}"
-        PORT_FOUND=1
-        break
+    if [ \$PORT_FOUND -ne 1 ]; then
+        echo "{\"status\": \"error\", \"message\": \"Could not find free port for ollama server\"}"
+        exit 1
     fi
-done
-
-if [ \$PORT_FOUND -ne 1 ]; then
-    echo "{\"status\": \"error\", \"message\": \"Could not find free port for ollama server\"}"
-    exit 1
 fi
 
 if [ -f "\$OLLAMA_PID_FILE" ]; then
@@ -243,38 +247,36 @@ chmod +x "$DEACTIVATE_DIR/1_ollama_server.sh"
 # source $(realpath "$CONDA_PREFIX/etc/profile.d/conda.sh") && conda activate $ENV_NAME
 # that is a pain.
 # Script for conda env activation (It is literally impossible to mess this up)
-cat >./activate_conda_env.sh <<'EOF'
+cat >./activate_conda_env.sh <<EOF
 #!/bin/bash
 set -euo pipefail
 
-# Resolve paths relative to this script
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-CONDA_PREFIX="$SCRIPT_DIR/conda"
-ENV_NAME="$ENV"
+CONDA_PREFIX="$CONDA_PATH"
+ENV_NAME="$ENV_NAME"
 
 # Source conda (from the Miniconda installation, not the env)
-if [ ! -f "$CONDA_PREFIX/etc/profile.d/conda.sh" ]; then
-    echo "Error: conda not found in $CONDA_PREFIX"
+if [ ! -f "\$CONDA_PREFIX/etc/profile.d/conda.sh" ]; then
+    echo "Error: conda not found in \$CONDA_PREFIX"
     exit 1
 fi
-source "$CONDA_PREFIX/etc/profile.d/conda.sh"
+source "\$CONDA_PREFIX/etc/profile.d/conda.sh"
 
 deactivate() {
-    EXIT_CODE=$?
+    EXIT_CODE=\$?
 
-    if [ "${CONDA_DEFAULT_ENV:-}" = "$ENV_NAME" ]; then
+    if [ "\${CONDA_DEFAULT_ENV:-}" = "\$ENV_NAME" ]; then
         conda deactivate
     fi
 
-    exit $EXIT_CODE
+    exit \$EXIT_CODE
 }
 
 trap 'deactivate' EXIT
-conda activate "$ENV_NAME"
+conda activate "\$ENV_NAME"
 
-if [ "$#" -gt 0 ]; then
+if [ "\$#" -gt 0 ]; then
     # If user provided arguments, run them inside the env
-    "$@"
+    "\$@"
 else
     # Otherwise, start an interactive shell
     bash
