@@ -18,10 +18,12 @@ It will also install ollama.
 Then it will run an example model (A Llama variant from nvidia) - slexample.sh calls sbatch to run the specified model on a slurm cluster
 example.sh will run it without slurm
 
+More about getting models can be found at https://ollama.com/search and https://docs.ollama.com/import
+Ollama models can be pulled with ./activate_conda_env.sh ollama pull <model_name>
+
 Once installed and running you can use the following scripts to interact with the server
 
 activate_conda_env.sh will activate the conda environment and ollama server installed by build.sh
-get_model.py <model_name> will download a model and create quantised versions of it
 sbatch slurm_start.sh <model_name> will start the server with the model
 prompt.sh will generate text using the prompt or promptb64.sh will take a base64 encoded prompt
 (To handle special characters inside the prompt)
