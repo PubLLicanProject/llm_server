@@ -18,46 +18,14 @@ set -euo pipefail
 : "${ENV_NAME:=env}"
 
 mkdir -p "${OLLAMA_PREFIX}/bin"
-
-echo "Installing Miniconda to ${CONDA_PREFIX}."
-INSTALLER="Miniconda3-latest-Linux-x86_64.sh"
-
-if [ ! -f "$INSTALLER" ]; then
-    echo "Downloading Miniconda installer..."
-    wget -c "https://repo.anaconda.com/miniconda/$INSTALLER"
-else
-    echo "Miniconda installer already present, skipping download."
-fi
-
-if [ ! -d "$CONDA_PREFIX" ]; then
-    echo "Installing Miniconda..."
-    bash "$INSTALLER" -b -p "$(realpath "$CONDA_PREFIX")"
-else
-    echo "Miniconda already installed in ${CONDA_PREFIX}, skipping installation."
-fi
-export PATH="$(realpath "$CONDA_PREFIX/bin"):$PATH"
-
-# TOS
-conda tos interactive --override-channels --channel https://repo.anaconda.com/pkgs/main
-conda tos interactive --override-channels --channel https://repo.anaconda.com/pkgs/r
-
-# Initialize
-source "$(realpath "$CONDA_PREFIX/etc/profile.d/conda.sh")"
-
-conda create -y -n "$ENV_NAME" python=3.10
-conda activate "$ENV_NAME"
-pip install -r requirements.txt
-chmod 755 ./*.sh
-
 if [[ -t 0 ]]; then
-    echo "Please select your GPU type:"
+    echo "Please select your GPU type for Ollama installation:"
     echo "  1) AMD"
     echo "  2) NVIDIA"
     echo
     echo "Enter your choice [1-2]: "
     read -r choice
 else
-    # Default to NVIDIA if non-interactive
     echo "Non-interactive mode detected. Defaulting to NVIDIA."
     choice=2
 fi
@@ -110,6 +78,36 @@ echo "Ollama version:"
     echo "Error: Ollama failed to run"
     exit 1
 }
+
+echo "Installing Miniconda to ${CONDA_PREFIX}."
+INSTALLER="Miniconda3-latest-Linux-x86_64.sh"
+
+if [ ! -f "$INSTALLER" ]; then
+    echo "Downloading Miniconda installer..."
+    wget -c "https://repo.anaconda.com/miniconda/$INSTALLER"
+else
+    echo "Miniconda installer already present, skipping download."
+fi
+
+if [ ! -d "$CONDA_PREFIX" ]; then
+    echo "Installing Miniconda..."
+    bash "$INSTALLER" -b -p "$(realpath "$CONDA_PREFIX")"
+else
+    echo "Miniconda already installed in ${CONDA_PREFIX}, skipping installation."
+fi
+export PATH="$(realpath "$CONDA_PREFIX/bin"):$PATH"
+
+# TOS
+conda tos interactive --override-channels --channel https://repo.anaconda.com/pkgs/main
+conda tos interactive --override-channels --channel https://repo.anaconda.com/pkgs/r
+
+# Initialize
+source "$(realpath "$CONDA_PREFIX/etc/profile.d/conda.sh")"
+
+conda create -y -n "$ENV_NAME" python=3.10
+conda activate "$ENV_NAME"
+pip install -r requirements.txt
+chmod 755 ./*.sh
 
 # Ollama conda hooks
 # activate order:
