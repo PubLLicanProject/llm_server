@@ -55,7 +55,7 @@ fi
 
 if [ ! -x "$OLLAMA_PREFIX/bin/ollama" ]; then
     echo "Extracting Ollama..."
-    tar zxf "$OLLAMA_TGZ" -C "$OLLAMA_PREFIX"
+    tar zxf "$OLLAMA_TGZ" -C "$OLLAMA_PREFIX" && rm -f "$OLLAMA_TGZ"
 else
     echo "Ollama already installed at $OLLAMA_PREFIX/bin/ollama"
 fi
@@ -66,7 +66,7 @@ if [ "$GPU" = "AMD" ]; then
     if [ ! -f "$ROCM_TGZ" ]; then
         curl -fLo "$ROCM_TGZ" -C - https://ollama.com/download/$ROCM_TGZ
     fi
-    tar zxf "$ROCM_TGZ" -C "$OLLAMA_PREFIX"
+    tar zxf "$ROCM_TGZ" -C "$OLLAMA_PREFIX" && rm -f "$ROCM_TGZ"
 fi
 
 export PATH="$OLLAMA_PREFIX/bin:$PATH"
@@ -91,7 +91,7 @@ fi
 
 if [ ! -d "$CONDA_PREFIX" ]; then
     echo "Installing Miniconda..."
-    bash "$INSTALLER" -b -p "$(realpath "$CONDA_PREFIX")"
+    bash "$INSTALLER" -b -p "$(realpath "$CONDA_PREFIX")" && rm -f "$INSTALLER"
 else
     echo "Miniconda already installed in ${CONDA_PREFIX}, skipping installation."
 fi
