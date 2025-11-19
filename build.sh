@@ -44,41 +44,39 @@ case "$choice" in
     ;;
 esac
 
-echo "Installing Ollama."
-OLLAMA_TGZ="ollama-linux-amd64.tgz"
-
-if [ ! -f "$OLLAMA_TGZ" ]; then
-    echo "Downloading Ollama..."
-    curl -fLo "$OLLAMA_TGZ" -C - https://ollama.com/download/$OLLAMA_TGZ
+if [ -x "$OLLAMA_PREFIX/bin/ollama" ]; then
+    echo "Ollama already installed at $OLLAMA_PREFIX/bin/ollama, skipping installation."
 else
-    echo "Ollama archive already present, skipping download."
-fi
+    echo "Installing Ollama."
+    OLLAMA_TGZ="ollama-linux-amd64.tgz"
 
-if [ ! -x "$OLLAMA_PREFIX/bin/ollama" ]; then
-    echo "Extracting Ollama..."
-    tar zxf "$OLLAMA_TGZ" -C "$OLLAMA_PREFIX" && rm -f "$OLLAMA_TGZ"
-else
-    echo "Ollama already installed at $OLLAMA_PREFIX/bin/ollama"
-fi
-
-if [ "$GPU" = "AMD" ]; then
-    echo "Installing AMD ROCm add-on."
-    ROCM_TGZ="ollama-linux-amd64-rocm.tgz"
-    if [ ! -f "$ROCM_TGZ" ]; then
-        curl -fLo "$ROCM_TGZ" -C - https://ollama.com/download/$ROCM_TGZ
+    if [ ! -f "$OLLAMA_TGZ" ]; then
+        echo "Downloading Ollama..."
+        curl -fLo "$OLLAMA_TGZ" -C - https://ollama.com/download/$OLLAMA_TGZ
+    else
+        echo "Ollama archive already present, skipping download."
     fi
-    tar zxf "$ROCM_TGZ" -C "$OLLAMA_PREFIX" && rm -f "$ROCM_TGZ"
+
+    if [ ! -x "$OLLAMA_PREFIX/bin/ollama" ]; then
+        echo "Extracting Ollama..."
+        tar zxf "$OLLAMA_TGZ" -C "$OLLAMA_PREFIX" && rm -f "$OLLAMA_TGZ"
+    else
+        echo "Ollama already installed at $OLLAMA_PREFIX/bin/ollama"
+    fi
+
+    if [ "$GPU" = "AMD" ]; then
+        echo "Installing AMD ROCm add-on."
+        ROCM_TGZ="ollama-linux-amd64-rocm.tgz"
+        if [ ! -f "$ROCM_TGZ" ]; then
+            curl -fLo "$ROCM_TGZ" -C - https://ollama.com/download/$ROCM_TGZ
+        fi
+        tar zxf "$ROCM_TGZ" -C "$OLLAMA_PREFIX" && rm -f "$ROCM_TGZ"
+    fi
 fi
 
 export PATH="$OLLAMA_PREFIX/bin:$PATH"
 export OLLAMA_MODELS="$OLLAMA_PREFIX/models"
 mkdir -p "$OLLAMA_MODELS"
-
-echo "Ollama version:"
-"$OLLAMA_PREFIX/bin/ollama" --version || {
-    echo "Error: Ollama failed to run"
-    exit 1
-}
 
 echo "Installing Miniconda to ${CONDA_PREFIX}."
 INSTALLER="Miniconda3-latest-Linux-x86_64.sh"
