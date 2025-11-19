@@ -157,24 +157,27 @@ HOSTNAME_TAG="$(hostname | tr -cs 'A-Za-z0-9_' '_')"
 export OLLAMA_PID_FILE="$(realpath "$OLLAMA_PREFIX")/ollama.pid.\${HOSTNAME_TAG}"
 export OLLAMA_LOG_FILE="$(realpath "$OLLAMA_PREFIX")/ollama.log.\${HOSTNAME_TAG}"
 
-if [ -z "\${OLLAMA_HOST:-}" ]; then
-    MIN_PORT=1024
-    MAX_PORT=65535
-    PORT_FOUND=0
-    for i in {1..10}; do
-        CANDIDATE_PORT=\$((RANDOM % (MAX_PORT - MIN_PORT + 1) + MIN_PORT))
+if [ ! -z "\${OLLAMA_HOST:-}" ]; then
+    echo "{\"status\": \"ok\", \"host\": \"\$OLLAMA_HOST\"}"
+    return 0
+fi
 
-        if ! ss -tln 2>/dev/null | grep -q ":\${CANDIDATE_PORT} "; then
-            export OLLAMA_HOST="127.0.0.1:\${CANDIDATE_PORT}"
-            PORT_FOUND=1
-            break
-        fi
-    done
+MIN_PORT=1024
+MAX_PORT=65535
+PORT_FOUND=0
+for i in {1..10}; do
+    CANDIDATE_PORT=\$((RANDOM % (MAX_PORT - MIN_PORT + 1) + MIN_PORT))
 
-    if [ \$PORT_FOUND -ne 1 ]; then
-        echo "{\"status\": \"error\", \"message\": \"Could not find free port for ollama server\"}"
-        exit 1
+    if ! ss -tln 2>/dev/null | grep -q ":\${CANDIDATE_PORT} "; then
+        export OLLAMA_HOST="127.0.0.1:\${CANDIDATE_PORT}"
+        PORT_FOUND=1
+        break
     fi
+done
+
+if [ \$PORT_FOUND -ne 1 ]; then
+    echo "{\"status\": \"error\", \"message\": \"Could not find free port for ollama server\"}"
+    exit 1
 fi
 
 if [ -f "\$OLLAMA_PID_FILE" ]; then
