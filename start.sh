@@ -1,2 +1,3 @@
 #!/bin/bash --login
-./activate_conda_env.sh python llama_server.py "$@"
+source ollama_env/bin/activate
+python llama_server.py "$@"
