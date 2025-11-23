@@ -92,8 +92,11 @@ if ! grep -q "OLLAMA_STARTUP_LOGIC" "$ACTIVATE_SCRIPT"; then
     cat >>"$ACTIVATE_SCRIPT" <<EOF
 # OLLAMA_STARTUP_LOGIC
 # 1. Configure Environment
-export OLLAMA_PREFIX="$OLLAMA_ABS_PATH"
-export OLLAMA_MODELS="$OLLAMA_MODELS"
+: "\${OLLAMA_PREFIX:=$OLLAMA_ABS_PATH}"
+: "\${OLLAMA_MODELS:=$OLLAMA_MODELS}"
+
+export OLLAMA_PREFIX
+export OLLAMA_MODELS
 export PATH="\$OLLAMA_PREFIX/bin:\$PATH"
 
 # 2. Start Server Logic
@@ -123,7 +126,6 @@ if [ -z "\${OLLAMA_HOST:-}" ]; then
              fi
         fi
 
-        echo "Starting Ollama on \$OLLAMA_HOST."
         nohup "\$OLLAMA_PREFIX/bin/ollama" serve > "\$OLLAMA_LOG_FILE" 2>&1 &
         echo \$! > "\$OLLAMA_PID_FILE"
 
@@ -139,14 +141,15 @@ if [ -z "\${OLLAMA_HOST:-}" ]; then
 
         if [ "\${SERVER_UP:-0}" -eq 1 ]; then
            trap stop_ollama_server EXIT
+           echo "{\"status\": \"ok\", \"host\": \"\$OLLAMA_HOST\", \"pid\": \"\$(cat "\$OLLAMA_PID_FILE")\"}"
         else
-           echo "WARNING: Ollama server failed to start within timeout. Check \$OLLAMA_LOG_FILE"
+           echo "{\"status\": \"error\", \"message\": \"Ollama server failed to start within timeout.\"}"
         fi
     else
-        echo "WARNING: Could not find free port for Ollama. Server not started."
+        echo "{\"status\": \"error\", \"message\": \"Could not find free port for ollama server\"}"
     fi
 else
-    echo "OLLAMA_HOST is already set to \$OLLAMA_HOST. Assuming external server."
+    echo "{\"status\": \"ok\", \"host\": \"\$OLLAMA_HOST\"}"
 fi
 EOF
 fi
@@ -161,13 +164,15 @@ stop_ollama_server() {
 
     local PID=\$(cat "\$OLLAMA_PID_FILE")
     if [ -n "\$PID" ] && ps -p \$PID > /dev/null 2>&1; then
-        echo "Stopping Ollama server (PID \$PID)."
         kill \$PID
         for _ in 1 2 3; do
             if ! ps -p \$PID > /dev/null; then break; fi
             sleep 0.5
         done
         if ps -p \$PID > /dev/null; then kill -9 \$PID; fi
+        echo "{\"status\": \"killed\"}"
+    else
+        echo "{\"status\": \"warning\", \"message\": \"Ollama server \$PID is not running\"}"
     fi
 
     rm -f "\$OLLAMA_PID_FILE"
