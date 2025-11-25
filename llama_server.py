@@ -1,6 +1,7 @@
 import ollama
 import os, sys, time
 import base64
+import json
 
 modelname = os.getenv("MODELNAME", "llama3-chatqa:8b")
 model_options = {}
@@ -35,7 +36,6 @@ def wait_for_prompt():
         if len(os.listdir(folder_path)) > 0:
             break
         time.sleep(2)
-        print(".", end="")
 
     files = [
         os.path.join(folder_path, f)
@@ -52,6 +52,11 @@ def wait_for_prompt():
         return [file, f.read()]
 
 
+def log_json(event, **fields):
+    record = {"event": event, **fields}
+    print(json.dumps(record, ensure_ascii=False), flush=True)
+
+
 def run_server():
     setup_folders()
     start = time.time()
@@ -59,7 +64,7 @@ def run_server():
         try:
             file, prompt = wait_for_prompt()
 
-            print("Prompt:", prompt, "File:", file)
+            log_json("prompt_received", prompt=prompt, file=file)
             # move input file to pending
             infile = f"{datapath}/input/{file}"
 
@@ -73,7 +78,6 @@ def run_server():
                 break
             if words[0].strip().lower() == "b64:":
                 prompt = base64.b64decode(words[1]).decode("utf-8")
-                print("Decoded Prompt:", prompt)
 
             os.rename(infile, f"{datapath}/pending/{file}")
 
@@ -95,16 +99,14 @@ def run_server():
                 content = message.get("content", "")
 
                 if not content:
-                    raise ValueError(f"No content returned from model: {response}")
+                    raise ValueError(f"no content returned from model: {response}")
 
                 # save the message to a file, it's temporary so that the move operation is atomic
                 with open(tempoutfile, "w") as f:
                     f.write(content)
 
             except Exception as pe:
-                print(
-                    f"Processing error: {pe}. Moving {datapath}/pending/{file} to {datapath}/input/{file} to retry."
-                )
+                log_json("processing_error", error=str(pe), file=file)
                 os.rename(f"{datapath}/pending/{file}", f"{datapath}/input/{file}")
                 if path.exists(tempoutfile):
                     os.remove(tempoutfile)
@@ -114,14 +116,14 @@ def run_server():
             # move file from pending to completed
             os.rename(f"{datapath}/pending/{file}", f"{datapath}/completed/{file}")
 
-            print("AI:", message)
+            log_json("model_response", response=content, file=file)
 
         except Exception as e:
-            print("Exception:", e)
+            log_json("error", error=str(e))
             pass
 
     end = time.time()
-    print(end - start)
+    log_json("exit", elapsed_seconds=end - start)
 
 
 if __name__ == "__main__":
