@@ -61,10 +61,10 @@ def run_server():
 
             print("Prompt:", prompt, "File:", file)
             # move input file to pending
-            infile = f"data/input/{file}"
+            infile = f"{datapath}/input/{file}"
 
-            tempoutfile = f"data/tempoutput/{file}"
-            outfile = f"data/output/{file}"
+            tempoutfile = f"{datapath}/tempoutput/{file}"
+            outfile = f"{datapath}/output/{file}"
 
             # check for instructions in first word
             words = prompt.split()
@@ -75,9 +75,7 @@ def run_server():
                 prompt = base64.b64decode(words[1]).decode("utf-8")
                 print("Decoded Prompt:", prompt)
 
-            # TODO: handle files that are stuck in pending
-            # (caused by any exception after this point)
-            os.rename(infile, f"data/pending/{file}")
+            os.rename(infile, f"{datapath}/pending/{file}")
 
             model_arguments = {
                 "model": modelname,
@@ -90,24 +88,34 @@ def run_server():
             if model_options:
                 model_arguments["options"] = model_options
 
-            response = ollama.chat(**model_arguments)
+            try:
+                response = ollama.chat(**model_arguments)
 
-            message = response.get("message", {})
-            content = message.get("content", "")
+                message = response.get("message", {})
+                content = message.get("content", "")
 
-            if not content:
-                raise ValueError(f"No content returned from model: {response}")
+                if not content:
+                    raise ValueError(f"No content returned from model: {response}")
 
-            # save the message to a file, it's temporary so that the move operation is atomic
-            with open(tempoutfile, "w") as f:
-                f.write(content)
+                # save the message to a file, it's temporary so that the move operation is atomic
+                with open(tempoutfile, "w") as f:
+                    f.write(content)
+
+            except Exception as pe:
+                print(
+                    f"Processing error: {pe}. Moving {datapath}/pending/{file} to {datapath}/input/{file} to retry."
+                )
+                os.rename(f"{datapath}/pending/{file}", f"{datapath}/input/{file}")
+                if path.exists(tempoutfile):
+                    os.remove(tempoutfile)
 
             # move temp file to output
             os.rename(tempoutfile, outfile)
             # move file from pending to completed
-            os.rename(f"data/pending/{file}", f"data/completed/{file}")
+            os.rename(f"{datapath}/pending/{file}", f"{datapath}/completed/{file}")
 
             print("AI:", message)
+
         except Exception as e:
             print("Exception:", e)
             pass

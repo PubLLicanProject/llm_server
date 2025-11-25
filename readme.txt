@@ -36,4 +36,13 @@ prompt.sh will generate text using the prompt or promptb64.sh will take a base64
 (To handle special characters inside the prompt)
 exit.sh will tell the server to shutdown
 
+The following environment variables can be exported to overwrite the defaults in the venv:
+ - OLLAMA_PREFIX
+ - OLLAMA_MODELS
 
+The following environment variables can be exported to modify the llama_server.py behaviour:
+ - MODELNAME (overriden by first argument of llama_server.py, default: llama3-chatqa:8b")
+ - MODEL_SEED (default: 9342)
+ - OLLAMA_CONTEXT_LENGTH (default: 17048)
+ - DATAPATH (default: ./data)
+ - SYSTEM_PROMPT (default in lines 12-16 of llama_server.py)
