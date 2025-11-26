@@ -33,6 +33,7 @@ def setup_folders():
         os.makedirs(datapath + "/results")
         os.makedirs(datapath + "/tempoutput")
         os.makedirs(datapath + "/tempinput")
+        os.makedirs(datapath + "/failed")
 
 
 def wait_for_prompt():
@@ -123,7 +124,7 @@ def run_server():
 
             except Exception as pe:
                 log_json("processing_error", error=str(pe), file=file)
-                os.rename(f"{datapath}/pending/{file}", f"{datapath}/input/{file}")
+                os.rename(f"{datapath}/pending/{file}", f"{datapath}/failed/{file}")
                 if path.exists(tempoutfile):
                     os.remove(tempoutfile)
 
