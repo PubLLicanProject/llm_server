@@ -1,4 +1,4 @@
-import ollama
+import requests
 import os, sys, time
 import base64
 import json
@@ -16,6 +16,11 @@ system_prompt = os.getenv(
     " make any sense, or is not factually coherent, explain why instead of answering something not correct. If you"
     " don't know the answer to a question, please don't share false information. Give a complete answer, do not try to continue the conversation.",
 )
+
+ollama_host = os.getenv("OLLAMA_HOST", "127.0.0.1:11434")
+
+if not ollama_host.startswith("http://") and not ollama_host.startswith("https://"):
+    ollama_host = "http://" + ollama_host
 
 
 def setup_folders():
@@ -57,6 +62,26 @@ def log_json(event, **fields):
     print(json.dumps(record, ensure_ascii=False), flush=True)
 
 
+def api_request(messages, options=None):
+    url = f"{ollama_host}/v1/chat/completions"
+    chat = {
+        "model": modelname,
+        "messages": messages,
+    }
+
+    if options:
+        chat["options"] = options
+
+    try:
+        response = requests.post(url, json=chat)
+        response.raise_for_status()
+        data = response.json()
+        content = data["choices"][0]["message"]["content"]
+        return content
+    except Exception as e:
+        raise RuntimeError(f"API request failed: {str(e)}")
+
+
 def run_server():
     setup_folders()
     start = time.time()
@@ -81,22 +106,13 @@ def run_server():
 
             os.rename(infile, f"{datapath}/pending/{file}")
 
-            model_arguments = {
-                "model": modelname,
-                "messages": [
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": prompt},
-                ],
-            }
-
-            if model_options:
-                model_arguments["options"] = model_options
+            messages = [
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": prompt},
+            ]
 
             try:
-                response = ollama.chat(**model_arguments)
-
-                message = response.get("message", {})
-                content = message.get("content", "")
+                content = api_request(messages, model_options)
 
                 if not content:
                     raise ValueError(f"no content returned from model: {response}")

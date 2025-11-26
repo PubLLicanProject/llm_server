@@ -46,3 +46,4 @@ The following environment variables can be exported to modify the llama_server.p
  - OLLAMA_CONTEXT_LENGTH (default: 17048)
  - DATAPATH (default: ./data)
  - SYSTEM_PROMPT (default in lines 12-16 of llama_server.py)
+ - OLLAMA_HOST (corrected default is exported during env activation, default: 127.0.0.1:11434)
