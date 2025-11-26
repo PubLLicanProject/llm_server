@@ -34,6 +34,7 @@ start.sh <model_name> will start the server with the model
 sbatch slurm_start.sh <model_name> will enqueue the server slurm job with the model
 prompt.sh will generate text using the prompt or promptb64.sh will take a base64 encoded prompt
 (To handle special characters inside the prompt)
+enqueue_prompt.sh and enqueue_promptb64.sh will write a prompt to the input directory of a running server
 exit.sh will tell the server to shutdown
 
 The following environment variables can be exported to overwrite the defaults in the venv:
