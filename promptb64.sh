@@ -1,20 +1,12 @@
 #!/bin/bash
-TMPFILE=`uuidgen | tr -d '-'`
-until [ -d data/tempinput ]
-do
-     sleep 3
-done
+source ollama_env/bin/activate
 
-#The prompt is base64 encoded - this is so that we can pass in special characters etc.
-echo "b64:" > data/tempinput/$TMPFILE
-echo $1 >> data/tempinput/$TMPFILE
-mv data/tempinput/$TMPFILE data/input/$TMPFILE
+if [ $# -lt 2 ]; then
+    echo "Usage: $0 <model_name> <prompt>"
+    exit 1
+fi
 
-until [ -f data/output/$TMPFILE ]
-do
-     sleep 3
-done
-cat data/output/$TMPFILE
-mv data/output/$TMPFILE data/results/$TMPFILE
-
-
+modelname="$1"
+shift
+prompt=$(printf "%s" "$*" | base64 --decode)
+ollama run "$modelname" "$prompt"

@@ -1,19 +1,12 @@
 #!/bin/bash
-TMPFILE=`uuidgen | tr -d '-'`
+source ollama_env/bin/activate
 
-until [ -d data/tempinput ]
-do
-     sleep 3
-done
+if [ $# -lt 2 ]; then
+    echo "Usage: $0 <model_name> <prompt>"
+    exit 1
+fi
 
-echo $1 > data/tempinput/$TMPFILE
-mv data/tempinput/$TMPFILE data/input/$TMPFILE
-
-until [ -f data/output/$TMPFILE ]
-do
-     sleep 3
-done
-cat data/output/$TMPFILE
-mv data/output/$TMPFILE data/results/$TMPFILE
-
-
+modelname="$1"
+shift
+prompt="$*"
+ollama run "$modelname" "$prompt"
